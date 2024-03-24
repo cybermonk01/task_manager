@@ -1,52 +1,32 @@
-require("dotenv").config({ path: "./.env" });
-import express, { Router } from "express";
-import { Server } from "socket.io";
-import { registerUser } from "./controllers/user.controller";
-import connectDB from "./db";
-import { upload } from "./middlewares/multer.middleware";
+require("dotenv").config("./.env");
+
+const cors = require("cors");
+const express = require("express");
+const authRoutes = require("./routes/authRoutes");
+const taskRouter = require("./routes/taskRoutes");
+const connectDB = require("./db/index.js");
+const morgan = require("morgan");
+
 const app = express();
 
-const PORT = 5000;
-
-app.use(cookieParser());
+app.use(cors());
+app.use(morgan("dev"));
+app.use(express.json());
 
 connectDB();
+app.use("/", (req, res) =>
+  res.json({
+    success: "true",
+    message: "success",
+  })
+);
+app.use("/auth", authRoutes);
+app.use("/task", taskRouter);
 
-const router = Router();
+// localhost:4000/auth/register
 
-const io = new Server(app);
+const port = 4000;
 
-
-io.on('connection', (socket)=>{
-  console.log(`socket io connected`);
-
-socket.on('chat message', (msg)=>{
-  console.log('message received', msg);
-      io.emit(`server emiting`,msg)
-});
-
-socket.on('disconnect', ()=>{
-console.log(`disconnected`);
-})
-
-})
-
-router.route('/').get(
-  res.sendFile(join(__dirname, 'index.html'));
-)
-
-router.route("/register").post(
-  
-  upload.fields([
-    {
-      name:'avatar',
-      maxCount:1
-    },{
-      name:'coverImage',
-      maxCount:1
-    }
-  ])
-  registerUser);
-app.listen(PORT, () => {
-  console.log(`server is listening on PORT ${PORT}`);
+app.listen(port, () => {
+  console.log(`server is running on port`, port);
 });
