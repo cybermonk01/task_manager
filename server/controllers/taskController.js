@@ -1,79 +1,111 @@
-const User = require("../models/user.model.js");
 const Task = require("../models/task.model.js");
 
 const addTask = async (req, res) => {
   const { task, id } = req.body;
 
   try {
-    if (!task) return res.status(400).send("please enter the task");
-    if (task.length < 10) res.status(400).send("add minimum 10 char");
-    const taskDetail = await new Task({
+    if (!task) return res.status(400).send("Please enter the task");
+    if (task.length < 10)
+      return res
+        .status(400)
+        .send("Add a minimum of 10 characters for the task");
+
+    const taskDetail = await Task.create({
       task,
-      cretedBy: id,
+      createdBy: id,
     });
-    await taskDetail.save();
+
     return res.status(200).send(taskDetail);
   } catch (error) {
-    return res.status(400).send("task addition failed");
+    return res.status(400).send("Task addition failed");
   }
 };
 
 const getAllTasks = async (req, res) => {
   const { id } = req.query;
   try {
-    let tasklist = await Task.find({ cretedBy: id });
-    return res.status(200).send(tasklist);
+    const taskList = await Task.find({ createdBy: id });
+    return res.status(200).send(taskList);
   } catch (error) {
-    return res.status(400).send(error);
+    return res.status(400).send(error.message);
   }
 };
 
-const editTask = async (req, res) => {};
+const editTask = async (req, res) => {
+  const { id } = req.params;
+  const { task } = req.body;
+
+  try {
+    const updatedTask = await Task.findByIdAndUpdate(
+      id,
+      { task },
+      { new: true }
+    );
+    if (!updatedTask) {
+      return res.status(404).send("Task not found");
+    }
+    return res.status(200).json(updatedTask);
+  } catch (error) {
+    console.error("Edit task failed:", error);
+    return res.status(500).send("Internal Server Error");
+  }
+};
 
 const statusChange = async (req, res) => {
   const { id, string } = req.body;
 
   try {
-    let task = await Task.findById({ _id: id });
-    if (string === "right") {
-      if (task.status === "backlog") {
-        task.status = "todo";
-        task.save();
-        return res.send(task);
-      } else if (task.status === "todo") {
-        task.status = "doing";
-        task.save();
-        return res.send(task);
-      } else if (task.status === "doing") {
-        task.status = "done";
-        task.save();
-        return res.send(task);
-      }
-    } else {
-      if (task.status === "done") {
-        task.status = "doing";
-        task.save();
-        return res.send(task);
-      } else if (task.status === "doing") {
-        task.status = "todo";
-        task.save();
-        return res.send(task);
-      } else if (task.status === "todo") {
-        task.status = "backlog";
-        task.save();
-        return res.send(task);
-      }
+    let task = await Task.findById(id);
+    if (!task) {
+      return res.status(404).send("Task not found");
     }
-  } catch (error) {}
+
+    switch (string) {
+      case "right":
+        switch (task.status) {
+          case "backlog":
+            task.status = "todo";
+            break;
+          case "todo":
+            task.status = "doing";
+            break;
+          case "doing":
+            task.status = "done";
+            break;
+        }
+        break;
+      default:
+        switch (task.status) {
+          case "done":
+            task.status = "doing";
+            break;
+          case "doing":
+            task.status = "todo";
+            break;
+          case "todo":
+            task.status = "backlog";
+            break;
+        }
+        break;
+    }
+
+    await task.save();
+    return res.send(task);
+  } catch (error) {
+    return res.status(400).send(error.message);
+  }
 };
 
 const deleteTask = async (req, res) => {
   const { id } = req.params;
   try {
-    let response = await Task.findByIdAndDelete(id);
+    const response = await Task.findByIdAndDelete(id);
+    if (!response) {
+      return res.status(404).send("Task not found");
+    }
     return res.status(200).send(response);
   } catch (error) {
-    return res.status(400).send("deleteFailed");
+    return res.status(400).send("Delete failed");
   }
 };
 
